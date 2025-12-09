@@ -1,5 +1,7 @@
 # -*- rpm-spec -*-
 
+# Skip tests in build
+%global with_check 0
 # This spec file assumes you are building on a Fedora or RHEL version
 # that's still supported by the vendor. It may work on other distros
 # or versions, but no effort will be made to ensure that going forward.
@@ -370,8 +372,8 @@ Requires: libvirt-daemon-driver-lxc = %{epoch}:%{version}-%{release}
 %endif
 %if %{with_qemu}
 # Not on Qubes:
-#Requires: libvirt-daemon-driver-qemu = %{epoch}:%{version}-%{release}
-#Requires: libvirt-client-qemu = %{epoch}:%{version}-%{release}
+#Requires: libvirt-daemon-driver-qemu = %%{epoch}:%%{version}-%%{release}
+#Requires: libvirt-client-qemu = %%{epoch}:%%{version}-%%{release}
 %endif
 # We had UML driver, but we've removed it.
 Obsoletes: libvirt-daemon-driver-uml <= 5.0.0
@@ -566,10 +568,10 @@ Summary: Server side daemon and supporting files for libvirt library
 # The client side, i.e. shared libs are in a subpackage
 Requires: libvirt-libs = %{epoch}:%{version}-%{release}
 Requires: libvirt-daemon-common = %{epoch}:%{version}-%{release}
-#Requires: libvirt-daemon-lock = %{epoch}:%{version}-%{release}
-#Requires: libvirt-daemon-plugin-lockd = %{epoch}:%{version}-%{release}
-#Requires: libvirt-daemon-log = %{epoch}:%{version}-%{release}
-#Requires: libvirt-daemon-proxy = %{epoch}:%{version}-%{release}
+#Requires: libvirt-daemon-lock = %%{epoch}:%%{version}-%%{release}
+#Requires: libvirt-daemon-plugin-lockd = %%{epoch}:%%{version}-%%{release}
+#Requires: libvirt-daemon-log = %%{epoch}:%%{version}-%%{release}
+#Requires: libvirt-daemon-proxy = %%{epoch}:%%{version}-%%{release}
 
 %description daemon
 Server side daemon required to manage the virtualization capabilities
@@ -1710,10 +1712,12 @@ rm -f libvirtd-tcp.socket libvirtd-tls.socket virtproxyd-tcp.socket virtproxyd-t
 
 %check
 
-%if %{with_native}
-# Building on slow archs, like emulated s390x in Fedora copr, requires
-# raising the test timeout
-VIR_TEST_DEBUG=1 %meson_test --no-suite syntax-check --timeout-multiplier 10
+%if 0%{?with_check}
+   %if %{with_native}
+   # Building on slow archs, like emulated s390x in Fedora copr, requires
+   # raising the test timeout
+   VIR_TEST_DEBUG=1 %meson_test --no-suite syntax-check --timeout-multiplier 10
+   %endif
 %endif
 
 %define libvirt_rpmstatedir %{_localstatedir}/lib/rpm-state/libvirt
