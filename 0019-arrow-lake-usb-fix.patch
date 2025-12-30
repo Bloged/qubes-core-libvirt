@@ -1,0 +1,46 @@
+From 7e6a40a78bd4048ffe4d6be05c9df69e6d6c8b19 Mon Sep 17 00:00:00 2001
+From: Qubes Builder <builder@qubes-os.org>
+Date: Tue, 16 Dec 2025 10:40:21 +0100
+Subject: [PATCH] virpci: Treat Arrow Lake bus 0x80 as root bus for ACS checks
+
+Arrow Lake (Intel Core Ultra 200 series) uses bus 0x80 for integrated
+devices like USB controllers. The complex PCH topology confuses parent
+device detection, causing 'Failed to find parent device' errors.
+
+Treat bus 0x80 like bus 0 for ACS checking purposes.
+
+Fixes: https://github.com/QubesOS/qubes-issues/issues/10393
+---
+ src/util/virpci.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/src/util/virpci.c b/src/util/virpci.c
+index 3816369..fbed8f5 100644
+--- a/src/util/virpci.c
++++ b/src/util/virpci.c
+@@ -2555,12 +2555,20 @@ virPCIDeviceIsBehindSwitchLackingACS(virPCIDevice *dev)
+     if (virPCIDeviceGetParent(dev, &parent) < 0)
+         return -1;
+     if (!parent) {
+-        /* if we have no parent, and this is the root bus, ACS doesn't come
+-         * into play since devices on the root bus can't P2P without going
+-         * through the root IOMMU.
++	            /* if we have no parent, and this is a root-like bus (0 or 0x80),
++         * ACS doesn't come into play since devices on these buses can't P2P
++         * without going through the root IOMMU.
++         *
++         * Arrow Lake (Intel Core Ultra 200 series) uses bus 0x80 for integrated
++         * devices like USB controllers, with a complex PCH topology that confuses
++         * parent device detection. Treat bus 0x80 like bus 0 for ACS purposes.
+          */
+         if (dev->address.bus == 0) {
+             return 0;
++        } else if (dev->address.bus == 0x80) {
++            VIR_DEBUG("%s %s: Arrow Lake bus 0x80 device, treating as root bus for ACS check",
++                      dev->id, dev->name);
++            return 0;
+         } else {
+             virReportError(VIR_ERR_INTERNAL_ERROR,
+                            _("Failed to find parent device for %1$s"),
+-- 
+2.51.1
